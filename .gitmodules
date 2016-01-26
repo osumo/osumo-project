@@ -1,0 +1,9 @@
+[submodule "osumo"]
+	path = osumo
+	url = git://github.com/osumo/osumo.git
+[submodule "romanesco"]
+	path = romanesco
+	url = git://github.com/kitware/romanesco.git
+[submodule "girder"]
+	path = girder
+	url = git://github.com/girder/girder.git
