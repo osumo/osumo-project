@@ -1,0 +1,8 @@
+name: iGPSE-shiny
+account: dingh
+server: shinyapps.io
+bundleId: 315117
+url: https://dingh.shinyapps.io/iGPSE-shiny
+when: 1448039258.19156
+asMultiple: FALSE
+asStatic: FALSE

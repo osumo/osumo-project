@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title> iGPSe </title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="dingh" >
+
+    <style type="text/css">
+      body {
+        padding-top: 60px;
+        padding-bottom: 40px;
+      }
+      .sidebar-nav {
+        padding: 9px 0;
+      }
+
+      @media (max-width: 1920px) {
+        /* Enable use of floated navbar text */
+        .navbar-text.pull-right {
+          float: none;
+          padding-left: 5px;
+          padding-right: 5px;
+        }
+      }
+    </style>
+    <link rel="stylesheet" type="text/css" href="./css/bootstrap.css" >
+    <link rel="stylesheet" type="text/css" href="./css/index.css" />
+    <script type="text/javascript">
+      // globle varaible
+      var group_f = 0;
+      var GROUP = {
+                    "group1": [1,2],
+                    "group2": [3,4]
+                  };
+      var GROUP1 = {
+                      "node": [],
+                      "link": []
+                   };
+      var GROUP2 = {
+                      "node": [],
+                      "link": []
+                   };
+      //var dinghao;
+    </script>
+</head>
+
+<body>
+  <script type="text/javascript" src="./lib/d3.v3.min.js"></script>
+  <script type="text/javascript" src="./lib/bootstrap.js"></script>
+  <script type="text/javascript" src="./lib/load_data.js"></script>
+  <script type="text/javascript" src="./lib/currentdata.js"></script>
+  <script type="text/javascript" src="./lib/parallelSets.js"></script>
+
+  <div class="row">
+    <div class="span6" align="center" style="margin-left: 130px;">
+					<div class="btn-group alignment" data-toggle="buttons-radio">
+  						<button type="button" class="btn" onclick="subgoup1()" id="subgroup1">Subgroup 1</button>
+  						<button type="button" class="btn" onclick="subgoup2()" id="subgroup2">Subgroup 2</button>
+					</div>
+          <input type="button" onclick="Reset()" class="btn btn-primary " value="Reset">
+          <input type="button" onclick="Plot()" class="btn btn-primary " value="PLOT">
+	  </div>
+  </div>
+
+  <div class="row">
+    <div id="brick" style="margin-left: 30px;"></div>
+  </div>
+
+
+
+  <script type="text/javascript">
+    function subgoup1() {
+      group_f = 1;
+      document.getElementById('subgroup1').className = "btn active";
+      document.getElementById('subgroup2').className = "btn";
+      document.getElementById('number').value="1";
+    }
+    function subgoup2() {
+      group_f = 2;
+      document.getElementById('subgroup1').className = "btn";
+      document.getElementById('subgroup2').className = "btn active";
+      document.getElementById('number').value="2";
+
+    }
+
+    function Plot(){
+      Shiny.onInputChange("mydata" , {GROUP1, GROUP2})
+    }
+
+    function Reset(){
+      group_f = 0;
+      GROUP1 = {
+                  "node": [],
+                  "link": []
+               };
+      GROUP2 = {
+                  "node": [],
+                  "link": []
+               };
+      Shiny.onInputChange("mydata" , {GROUP1, GROUP2})
+
+      document.getElementById('subgroup1').className = "btn";
+      document.getElementById('subgroup2').className = "btn";
+      d3.selectAll('rect').attr('class', 'box');
+      d3.selectAll('path.link').attr('class', 'link');
+    }
+
+  </script>
+
+  <script>
+    var dinghao;
+    Shiny.addCustomMessageHandler("myCallbackHandler",
+    function(clustering_result) {
+      //document.getElementById("mydiv").style.backgroundColor = color;
+       $("#brick").empty();
+       data = clustering_result;
+       parallelSets.init( data );
+    });
+
+
+  </script>
+
+  <script>
+    //javascript code to send data to shiny server
+     document.getElementById("mydiv").onclick = function() {
+       var number = Math.random();
+       //Shiny.onInputChange("mydata", number);
+   };
+ </script>
+</body>
+</html>

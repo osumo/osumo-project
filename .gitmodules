@@ -6,4 +6,4 @@
 	url = git://github.com/kitware/romanesco.git
 [submodule "girder"]
 	path = girder
-	url = git://github.com/girder/girder.git
+	url = git://github.com/opadron/girder.git

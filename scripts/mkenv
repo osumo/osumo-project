@@ -1,0 +1,46 @@
+#! /usr/bin/env bash
+#
+# small script for creating a python virtual environment
+#
+# ./mkenv [env-dir] [packages ...]
+#
+#     env-dir:  directory on the host filesystem on which to store the virtual
+#               environment.  If it already exists, skip creation.  (default:
+#               $SD/../cache/env where SD is the directory where the script is
+#               located)
+#
+#     packages: list of python packages to install into the virtual environment
+#               using pip.  If package is a path to a file, install packages
+#               listed in the file as in `pip -r`.
+#
+#     output: the absolute path to the created virtual environment.
+#
+
+env_dir="$1" ; shift
+if [ -z "$env_dir" ] ; then
+    env_dir="$( dirname "$( dirname "$( readlink -e "$0" )" )")/cache/env"
+else
+    env_dir="$( readlink -f "$env_dir" )"
+fi
+
+mkdir -p "$( dirname "$env_dir" )"
+
+if [ '!' -d "$env_dir" ] ; then
+    virtualenv "$env_dir"
+    source "$env_dir/bin/activate"
+
+    pip install --upgrade pip
+
+    args=("$@")
+    for ((i=0; i<${#args[@]}; ++i)) ; do
+        package="${args[$i]}"
+        if [ -f "$package" ] ; then
+            pip install -r "$package"
+        else
+            pip install "$package"
+        fi
+    done
+fi 1>&2
+
+echo "$env_dir"
+

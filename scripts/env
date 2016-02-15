@@ -1,0 +1,37 @@
+#! /usr/bin/env bash
+
+if [ "$( basename "$0" 2>/dev/null )" '=' 'env' ] ; then
+    echo "\"$0\" can only be sourced."
+    exit 1
+fi >&2
+
+if [ -x scripts/mkenv -a \
+     -d girder        -a \
+     -d romanesco     -a \
+     -d osumo            ]
+then
+    reqs=()
+
+    reqs[${#reqs[@]}]="girder/requirements.txt"
+    reqs[${#reqs[@]}]="girder/requirements-dev.txt"
+    # reqs[${#reqs[@]}]="girder/plugins/celery_jobs/requirements.txt"
+    # reqs[${#reqs[@]}]="girder/plugins/geospatial/requirements.txt"
+    # reqs[${#reqs[@]}]="girder/plugins/hdfs_assetstore/requirements.txt"
+    # reqs[${#reqs[@]}]="girder/plugins/thumbnails/requirements.txt"
+    # reqs[${#reqs[@]}]="girder/plugins/metadata_extractor/requirements.txt"
+    # reqs[${#reqs[@]}]="girder/clients/python/requirements.txt"
+
+    reqs[${#reqs[@]}]="romanesco/requirements.txt"
+    reqs[${#reqs[@]}]="romanesco/requirements-dev.txt"
+    reqs[${#reqs[@]}]="romanesco/romanesco/plugins/r/requirements.txt"
+    reqs[${#reqs[@]}]="romanesco/romanesco/plugins/girder_io/requirements.txt"
+    # reqs[${#reqs[@]}]="romanesco/romanesco/plugins/spark/requirements.txt"
+
+    env="$( scripts/mkenv "" "${reqs[@]}" )"
+
+    source "$env/bin/activate"
+
+else
+    echo "script can only be sourced from project home directory." >&2
+fi
+
