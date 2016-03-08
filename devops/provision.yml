@@ -1,0 +1,98 @@
+---
+
+  - hosts: localhost
+    connection: local
+    become: false
+    roles:
+      - role: aws-credentials
+        profile: sumo
+
+      - role: ec2-pod
+        name: sumo
+        region: us-east-1
+        state: running
+
+        ssh_keys:
+            main: "~/.ssh/sumo.pub"
+
+        instances:
+            main:
+                ssh_key: main
+                type: t2.medium
+                image: ami-fce3c696
+                volumes: [10]
+                security_groups: ["external"]
+                ansible_groups: ["web"]
+                ip: 52.0.125.243
+
+        security_groups:
+            external:
+              - { flow: "in", proto: "tcp", port: [22, 80, 443],
+                  cidr_ip: "0.0.0.0/0" }
+              - { flow: "out", proto: "all", cidr_ip: "0.0.0.0/0" }
+
+  - hosts: web
+    user: ubuntu
+    become: true
+    pre_tasks:
+      - name: filesystems | format
+        filesystem:
+            fstype: ext4
+            dev: /dev/xvdb
+
+      - name: filesystems | mount
+        mount:
+            fstype: ext4
+            name: /opt
+            src: /dev/xvdb
+            state: mounted
+
+      - name: install packages
+        apt:
+            name: r-base-core
+            state: present
+            update_cache: true
+
+      - name: install R packages
+        command: >
+            Rscript --slave --no-save --no-restore-history -e
+            "install.packages('{{ item }}', repos='http://cran.rstudio.com')"
+        with_items:
+          - shiny
+          - jsonlite
+          - pheatmap
+          - factoextra
+          - survival
+        ignore_errors: yes
+
+    roles:
+      - role: git-cache
+        repo: git://github.com/dingh/igpse.git
+        variable_prefix: igpse
+
+      - role: upstart
+        name: igpse
+        user: root
+        description: iGPSe R Shiny App
+        command: >
+            bash -c "cd /opt/igpse/{{ igpse_git_version }} && Rscript --no-save
+            --no-restore-history -e
+            'require(shiny) ; shiny::runApp(port=80, host=\"0.0.0.0\")'"
+
+    post_tasks:
+      - name: igpse | install home | create
+        file:
+            path: /opt/igpse/{{ igpse_git_version }}
+            state: directory
+
+      - name: igpse | repo | sync
+        command: >
+            rsync -avz --exclude=.git
+            "{{ igpse_git_work_dir }}/"
+            "/opt/igpse/{{ igpse_git_version }}"
+
+      - name: igpse | service | start
+        service:
+            name: igpse
+            state: started
+
