@@ -3,33 +3,69 @@
   - hosts: localhost
     connection: local
     become: false
+    pre_tasks:
+      - name: pod config | set
+        set_fact:
+            pod_config:
+                name: sumo
+                region: us-east-1
+
+                ssh_keys:
+                    main: "~/.ssh/sumo.pub"
+
+                instances:
+                    main:
+                        ssh_key: main
+                        type: t2.medium
+                        image: ami-fce3c696
+                        volumes: [10]
+                        security_groups: ["external"]
+                        ansible_groups: ["web"]
+                        ip: 52.0.125.243
+
+                security_groups:
+                    external:
+                      - { flow: "in", proto: "tcp", port: [22, 80, 443],
+                          cidr_ip: "0.0.0.0/0" }
+                      - { flow: "out", proto: "all", cidr_ip: "0.0.0.0/0" }
+
     roles:
       - role: aws-credentials
         profile: sumo
 
-      - role: ec2-pod
-        name: sumo
-        region: us-east-1
+      - role: ec2-pod2
+        name: "{{ pod_config.name }}"
+        region: "{{ pod_config.region }}"
         state: running
+        ssh_keys: "{{ pod_config.ssh_keys }}"
+        instances: "{{ pod_config.instances }}"
+        security_groups: "{{ pod_config.security_groups }}"
+        options:
+            ansible_groups_amend: false
+        ignore_errors: true
 
-        ssh_keys:
-            main: "~/.ssh/sumo.pub"
+    post_tasks:
+      - name: static ip | wait
+        wait_for:
+            host: "{{ pod_config.instances.main.ip }}"
+            port: 22
+            timeout: 300
+            state: started
 
-        instances:
-            main:
-                ssh_key: main
-                type: t2.medium
-                image: ami-fce3c696
-                volumes: [10]
-                security_groups: ["external"]
-                ansible_groups: ["web"]
-                ip: 52.0.125.243
+  - hosts: localhost
+    connection: local
+    become: false
+    roles:
+      - role: aws-credentials
+        profile: sumo
 
-        security_groups:
-            external:
-              - { flow: "in", proto: "tcp", port: [22, 80, 443],
-                  cidr_ip: "0.0.0.0/0" }
-              - { flow: "out", proto: "all", cidr_ip: "0.0.0.0/0" }
+      - role: ec2-pod2
+        name: "{{ pod_config.name }}"
+        region: "{{ pod_config.region }}"
+        state: running
+        ssh_keys: "{{ pod_config.ssh_keys }}"
+        instances: "{{ pod_config.instances }}"
+        security_groups: "{{ pod_config.security_groups }}"
 
   - hosts: web
     user: ubuntu
@@ -47,13 +83,33 @@
             src: /dev/xvdb
             state: mounted
 
-      - name: install packages
+      - name: apt packages | install
         apt:
-            name: r-base-core
+            name: python-apt
             state: present
             update_cache: true
 
-      - name: install R packages
+      - name: cran repository | key | fetch
+        apt_key:
+            keyserver: keyserver.ubuntu.com
+            id: E084DAB9
+            state: present
+
+      - name: cran repository | add
+        apt_repository:
+            repo: "deb https://cloud.r-project.org/bin/linux/ubuntu trusty/"
+            state: present
+
+      - name: packages | install
+        apt:
+            name: "{{ item }}"
+            state: present
+            update_cache: true
+        with_items:
+          - libcurl4-gnutls-dev
+          - r-base
+
+      - name: R packages | install
         command: >
             Rscript --slave --no-save --no-restore-history -e
             "install.packages('{{ item }}', repos='http://cran.rstudio.com')"
@@ -61,9 +117,9 @@
           - shiny
           - jsonlite
           - pheatmap
-          - factoextra
           - survival
-        ignore_errors: yes
+          # - devtools
+          # - factoextra devtools::install_github("kassambara/factoextra")
 
     roles:
       - role: git-cache
