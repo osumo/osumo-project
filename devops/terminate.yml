@@ -1,0 +1,13 @@
+
+  - hosts: localhost
+    connection: local
+    become: false
+    roles:
+      - role: aws-credentials
+        profile: sumo
+
+      - role: ec2-pod
+        name: sumo
+        region: us-east-1
+        state: absent
+
