@@ -1,0 +1,22 @@
+#! /usr/bin/env bash
+
+if [ '!' -d 'gobig' ] ; then
+    echo "This script must be ran from the osumo-project root" >&2
+    exit 1
+fi
+
+TMP_DIR="$( cd gobig ; mktemp -d -p . )"
+TMP_DIR_ABS="$( readlink -e "gobig/$TMP_DIR" )"
+trap "rm -rf \"$TMP_DIR_ABS\"" 0 1 2 3 15
+
+playbook="$1" ; shift
+
+cp "$playbook" "$TMP_DIR_ABS"
+set -x
+cd gobig
+ansible-playbook -i /dev/null                         \
+                 --private-key=~/.ssh/sumo            \
+                 "$TMP_DIR/$( basename "$playbook" )"
+
+exit $?
+

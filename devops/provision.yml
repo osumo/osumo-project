@@ -1,154 +1,260 @@
 ---
 
-  - hosts: localhost
-    connection: local
-    become: false
-    pre_tasks:
-      - name: pod config | set
-        set_fact:
-            pod_config:
-                name: sumo
-                region: us-east-1
+- hosts: localhost
+  connection: local
+  become: false
+#  pre_tasks:
+#    - name: AWS credentials | parse
+#      aws_credentials:
+#        profile: sumo
 
-                ssh_keys:
-                    main: "~/.ssh/sumo.pub"
+  roles:
+  - role: ec2-pod2
+    name: sumo-testing
+    region: us-east-1
+    ssh_keys:
+      main: "~/.ssh/sumo.pub"
+    instances:
+      "prod-web":
+        ssh_key: main
+        type: t2.medium
+        image: ami-fce3c696
+        volumes: [2, 10]
+        security_groups: ["open"]
+        ansible_groups: ["sumo", "production", "web"]
+      "prod-db":
+        ssh_key: main
+        type: t2.medium
+        image: ami-fce3c696
+        volumes: [2, 30]
+        security_groups: ["open"]
+        ansible_groups: ["sumo", "production", "db"]
+      "prod-worker":
+        ssh_key: main
+        type: t2.medium
+        image: ami-fce3c696
+        volumes: [2, 30]
+        security_groups: ["open"]
+        ansible_groups: ["sumo", "production", "worker"]
 
-                instances:
-                    main:
-                        ssh_key: main
-                        type: t2.medium
-                        image: ami-fce3c696
-                        volumes: [10]
-                        security_groups: ["external"]
-                        ansible_groups: ["web"]
-                        ip: 52.0.125.243
+      "stage-web":
+        ssh_key: main
+        type: t2.micro
+        image: ami-fce3c696
+        volumes: [2, 10]
+        security_groups: ["open"]
+        ansible_groups: ["sumo", "staging", "web"]
+      "stage-db":
+        ssh_key: main
+        type: t2.micro
+        image: ami-fce3c696
+        volumes: [2, 10]
+        security_groups: ["open"]
+        ansible_groups: ["sumo", "staging", "db"]
+      "stage-worker":
+        ssh_key: main
+        type: t2.micro
+        image: ami-fce3c696
+        volumes: [2, 10]
+        security_groups: ["open"]
+        ansible_groups: ["sumo", "staging", "worker"]
+    security_groups:
+      open:
+        - { flow: "sym", proto: "all", cidr_ip: "0.0.0.0/0" }
 
-                security_groups:
-                    external:
-                      - { flow: "in", proto: "tcp", port: [22, 80, 443],
-                          cidr_ip: "0.0.0.0/0" }
-                      - { flow: "out", proto: "all", cidr_ip: "0.0.0.0/0" }
+- hosts: sumo
+  user: ubuntu
+  become: true
+  tasks:
+    - name: filesystems | format
+      filesystem:
+        fstype: ext4
+        dev: "/dev/xvd{{ item }}"
+      with_items: ["b", "c"]
 
-    roles:
-      - role: aws-credentials
-        profile: sumo
+    - name: filesystems | mount
+      mount:
+        fstype: ext4
+        name: "{{ item.value }}"
+        src: "/dev/xvd{{ item.key }}"
+        state: mounted
+      with_dict:
+        b: /repo
+        c: /opt
 
-      - role: ec2-pod2
-        name: "{{ pod_config.name }}"
-        region: "{{ pod_config.region }}"
-        state: running
-        ssh_keys: "{{ pod_config.ssh_keys }}"
-        instances: "{{ pod_config.instances }}"
-        security_groups: "{{ pod_config.security_groups }}"
-        options:
-            ansible_groups_amend: false
-        ignore_errors: true
+    - name: apt packages | install
+      apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: true
+      with_items:
+      - git
+      - python-apt
 
-    post_tasks:
-      - name: static ip | wait
-        wait_for:
-            host: "{{ pod_config.instances.main.ip }}"
-            port: 22
-            timeout: 300
-            state: started
+#    - name: osumo-project | clone
+#      git_cache:
+#        repo: git://github.com/dingh/igpse.git
+#        dest: /opt
+#        state: present
 
-  - hosts: localhost
-    connection: local
-    become: false
-    roles:
-      - role: aws-credentials
-        profile: sumo
-
-      - role: ec2-pod2
-        name: "{{ pod_config.name }}"
-        region: "{{ pod_config.region }}"
-        state: running
-        ssh_keys: "{{ pod_config.ssh_keys }}"
-        instances: "{{ pod_config.instances }}"
-        security_groups: "{{ pod_config.security_groups }}"
-
-  - hosts: web
-    user: ubuntu
-    become: true
-    pre_tasks:
-      - name: filesystems | format
-        filesystem:
-            fstype: ext4
-            dev: /dev/xvdb
-
-      - name: filesystems | mount
-        mount:
-            fstype: ext4
-            name: /opt
-            src: /dev/xvdb
-            state: mounted
-
-      - name: apt packages | install
-        apt:
-            name: python-apt
-            state: present
-            update_cache: true
-
-      - name: cran repository | key | fetch
-        apt_key:
-            keyserver: keyserver.ubuntu.com
-            id: E084DAB9
-            state: present
-
-      - name: cran repository | add
-        apt_repository:
-            repo: "deb https://cloud.r-project.org/bin/linux/ubuntu trusty/"
-            state: present
-
-      - name: packages | install
-        apt:
-            name: "{{ item }}"
-            state: present
-            update_cache: true
-        with_items:
-          - libcurl4-gnutls-dev
-          - r-base
-
-      - name: R packages | install
-        command: >
-            Rscript --slave --no-save --no-restore-history -e
-            "install.packages('{{ item }}', repos='http://cran.rstudio.com')"
-        with_items:
-          - shiny
-          - jsonlite
-          - pheatmap
-          - survival
-          # - devtools
-          # - factoextra devtools::install_github("kassambara/factoextra")
-
-    roles:
-      - role: git-cache
-        repo: git://github.com/dingh/igpse.git
-        variable_prefix: igpse
-
-      - role: upstart
-        name: igpse
-        user: root
-        description: iGPSe R Shiny App
-        command: >
-            bash -c "cd /opt/igpse/{{ igpse_git_version }} && Rscript --no-save
-            --no-restore-history -e
-            'require(shiny) ; shiny::runApp(port=80, host=\"0.0.0.0\")'"
-
-    post_tasks:
-      - name: igpse | install home | create
-        file:
-            path: /opt/igpse/{{ igpse_git_version }}
-            state: directory
-
-      - name: igpse | repo | sync
-        command: >
-            rsync -avz --exclude=.git
-            "{{ igpse_git_work_dir }}/"
-            "/opt/igpse/{{ igpse_git_version }}"
-
-      - name: igpse | service | start
-        service:
-            name: igpse
-            state: started
+###  - name: apt packages | install
+###
+###  - hosts: web
+###    user: ubuntu
+###    become: true
+###    tasks:
+###      - name: 
+### 
+### 
+###   - name: cran repository | key | fetch
+###     apt_key:
+###       keyserver: keyserver.ubuntu.com
+###       id: E084DAB9
+###       state: present
+### 
+###   - name: cran repository | add
+###     apt_repository:
+###       repo: "deb https://cloud.r-project.org/bin/linux/ubuntu trusty/"
+###       state: present
+### 
+###   - name: packages | install
+###     apt:
+###       name: "{{ item }}"
+###       state: present
+###       update_cache: true
+###     with_items:
+###     - libcurl4-gnutls-dev
+###     - r-base
+### 
+###   - name: R packages | install
+###     command: >-
+###       Rscript --slave --no-save --no-restore-history -e
+###       "install.packages('{{ item }}', repos='http://cran.rstudio.com')"
+###     with_items:
+###     - shiny
+###     - jsonlite
+###     - pheatmap
+###     - survival
+###     # - devtools
+###     # - factoextra devtools::install_github("kassambara/factoextra")
+### 
+###   - name: iGPSe | fetch
+###     git_cache:
+###       repo: git://github.com/dingh/igpse.git
+###       state: present
+###     register: igpse
+### 
+###   - name: variables | igpse | set
+###     set_fact:
+###       igpse_tag: "{{ igpse.tag }}"
+###       igpse_tag_path: "{{ igpse.tag_path }}"
+###       igpse_git_work_dir: "{{ igpse.work_path }}"
+### 
+### - hosts: web
+###   user: ubuntu
+###   become: true
+###   roles:
+###   - role: upstart
+###     name: igpse
+###     user: root
+###     description: iGPSe R Shiny App
+###     command: >-
+###       bash -c "cd /opt/igpse/{{ igpse_tag_path }} && Rscript --no-save
+###       --no-restore-history -e
+###       'require(shiny) ; shiny::runApp(port=80, host=\"0.0.0.0\")'"
+### 
+###   post_tasks:
+###   - name: igpse | install home | create
+###     file:
+###       path: /opt/igpse/{{ igpse_tag_path }}
+###       state: directory
+### 
+###   - name: igpse | repo | sync
+###     command: >-
+###       rsync -avz --exclude=.git
+###       "{{ igpse_git_work_dir }}/"
+###       "/opt/igpse/{{ igpse_tag_path }}"
+### 
+###   - name: igpse | service | start
+###     service:
+###       name: igpse
+###       state: started
+### 
+### 
+### 
+### 
+### 
+### 
+### 
+### 
+### 
+### 
+### 
+### 
+### 
+### 
+###           name: sumo
+###           region: us-east-1
+###           ssh_keys:
+###             main: "~/.ssh/sumo.pub"
+### 
+###           instances:
+###             main:
+###               ssh_key: main
+###               type: t2.medium
+###               image: ami-fce3c696
+###               volumes: [10]
+###               security_groups: ["world_viewable", "ssh", "internal"]
+###               ansible_groups: ["sumo", "production", "web"]
+###               ip: 52.0.125.243
+###             staging:
+###               ssh_key: main
+###               type: t2.medium
+###               image: ami-fce3c696
+###               volumes: [10]
+###               security_groups: ["kw_viewable", "ssh", "internal"]
+###               ansible_groups: ["sumo", "staging", "web"]
+###               ip: 52.86.100.86
+###             db:
+###               ssh_key: main
+###               type: t2.medium
+###               image: ami-fce3c696
+###               volumes: [30]
+###               security_groups: ["internal"]
+###               ansible_groups: ["sumo", "production", "staging", "db"]
+###             worker:
+###               ssh_key: main
+###               type: t2.medium
+###               image: ami-fce3c696
+###               volumes: [30]
+###               security_groups: ["internal"]
+###               ansible_groups: ["sumo", "production", "staging", "worker"]
+### 
+###           security_groups:
+###             internal:
+###               - { flow: "sym", proto: "all",
+###                   groups: ["internal", "world_viewable", "kw_viewable"] }
+### 
+###             ssh:
+###               - { flow: "in", proto: "tcp", port: 22,
+###                   cidr_ip: "66.194.253.0/24" }
+### 
+###             kw_viewable:
+###               - { flow: "in", proto: "tcp", port: [80, 443],
+###                   cidr_ip: "66.194.253.0/24" }
+### 
+###             world_viewable:
+###               - { flow: "in", proto: "tcp", port: [80, 443],
+###                   cidr_ip: "0.0.0.0/0" }
+### 
+###             open:
+###               - { flow: "sym", proto: "all",
+###                   cidr_ip: "0.0.0.0/0" }
+### 
+### 
+### 
+### 
+### 
+###     options:
+###       ansible_groups_amend: false
 
