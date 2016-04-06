@@ -185,7 +185,7 @@
       local_action: shell rm -rf /tmp/osumo.*
       become: false
 
-   roles:
+  roles:
     - role: nodejs
       nodejs_version: v5.4.0
       state: present
