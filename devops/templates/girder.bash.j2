@@ -1,0 +1,19 @@
+#! /usr/bin/env bash
+
+cd "$( dirname "$0" )"
+
+source scripts/env
+
+pushd girder
+npm install
+python -m girder &
+
+if [ '!' -d initialized ] ; then
+    # mkdir initialized
+    true
+fi
+
+popd
+
+wait
+

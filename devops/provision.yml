@@ -150,7 +150,6 @@
       local_action: command mktemp -d --tmpdir=/tmp osumo.XXXXXXXXXX
       become: false
       register: tempdir
-      when: is_not_db|bool
 
     - name: templates | fetch
       fetch:
@@ -161,6 +160,8 @@
       with_items:
         - girder.local.cfg.j2
         - worker.local.cfg.j2
+        - girder.bash.j2
+        - worker.bash.j2
       when: is_not_db|bool
 
     - name: resonant | configure
@@ -172,74 +173,95 @@
           dest: girder/girder/conf/girder.local.cfg
         - src: worker.local.cfg.j2
           dest: girder_worker/girder_worker/worker.local.cfg
+        - src: girder.bash.j2
+          dest: girder.bash
+        - src: worker.bash.j2
+          dest: worker.bash
       when: is_not_db|bool
 
+    # NOTE(opadron): this was the only way I could get ansible to delete all the
+    # temporary directories (OS X)
     - name: tmp dir | remove
-      local_action: command rm -r {{ tempdir.stdout }}
-      when: is_not_db|bool
+      local_action: shell rm -rf /tmp/osumo.*
+      become: false
 
-##     - name: configure girder_worker to use r and girder_io plugins
-##     - name: configure girder_worker to use rabbitmq for its work queue
-##     - name: configure girder to use rabbitmq for its work queue
-##     - source virtual env script
-## 
-## 
-##   roles:
-##     - role: mongodb
-##       state: started
-##       when: is_db|bool
-## 
-##     - role: nodejs
-##       nodejs_version: v5.4.0
-##       state: present
-##       when: is_not_db|bool
-## 
-##     - role: rabbitmq
-##       state: started
+   roles:
+    - role: nodejs
+      nodejs_version: v5.4.0
+      state: present
+      when: is_web|bool
+
+    - role: rabbitmq
+      state: started
       when: is_worker|bool
 
-### osumo_repo.destination
+    - role: mongodb
+      state: started
+      when: is_db|bool
 
-###  - name: apt packages | install
-###
-###  - hosts: web
-###    user: ubuntu
-###    become: true
-###    tasks:
-###      - name: 
-### 
-### 
-###   - name: cran repository | key | fetch
-###     apt_key:
-###       keyserver: keyserver.ubuntu.com
-###       id: E084DAB9
-###       state: present
-### 
-###   - name: cran repository | add
-###     apt_repository:
-###       repo: "deb https://cloud.r-project.org/bin/linux/ubuntu trusty/"
-###       state: present
-### 
-###   - name: packages | install
-###     apt:
-###       name: "{{ item }}"
-###       state: present
-###       update_cache: true
-###     with_items:
-###     - libcurl4-gnutls-dev
-###     - r-base
-### 
-###   - name: R packages | install
-###     command: >-
-###       Rscript --slave --no-save --no-restore-history -e
-###       "install.packages('{{ item }}', repos='http://cran.rstudio.com')"
-###     with_items:
-###     - shiny
-###     - jsonlite
-###     - pheatmap
-###     - survival
-###     # - devtools
-###     # - factoextra devtools::install_github("kassambara/factoextra")
+    - role: upstart
+      name: girder
+      description: Girder Data Management Platform -- Web Service
+      command: >-
+          bash -e "{{ osumo_repo.destination }}/girder.bash"
+      when: is_web|bool
+
+    - role: upstart
+      name: girder_worker
+      description: Girder Worker Execution Engine Service
+      command: >-
+          bash -e "{{ osumo_repo.destination }}/worker.bash"
+      when: is_worker|bool
+
+  post_tasks:
+    - name: cran repository | key | fetch
+      apt_key:
+        keyserver: keyserver.ubuntu.com
+        id: E084DAB9
+        state: present
+      when: is_worker|bool
+
+    - name: cran repository | add
+      apt_repository:
+        repo: "deb https://cloud.r-project.org/bin/linux/ubuntu trusty/"
+        state: present
+      when: is_worker|bool
+
+    - name: packages | install
+      apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: true
+      with_items:
+      - libcurl4-gnutls-dev
+      - r-base
+      when: is_worker|bool
+
+    - name: R packages | install
+      command: >-
+        Rscript --slave --no-save --no-restore-history -e
+        "install.packages('{{ item }}', repos='http://cran.rstudio.com')"
+      with_items:
+      - shiny
+      - jsonlite
+      - pheatmap
+      - survival
+      # - devtools
+      # - factoextra devtools::install_github("kassambara/factoextra")
+      when: is_worker|bool
+
+    - name: girder | service | start
+      service:
+        name: girder
+        state: restarted
+      when: is_web|bool
+
+    - name: girder worker | service | start
+      service:
+        name: girder_worker
+        state: restarted
+      when: is_worker|bool
+
 ### 
 ###   - name: iGPSe | fetch
 ###     git_cache:

@@ -1,0 +1,18 @@
+#! /usr/bin/env bash
+
+cd "$( dirname "$0" )"
+
+source scripts/env
+
+pushd girder_worker
+python -m girder_worker &
+
+if [ '!' -d initialized ] ; then
+    # mkdir initialized
+    true
+fi
+
+popd
+
+wait
+
