@@ -82,6 +82,10 @@
         is_not_prod: "{{ not (is_prod|bool) }}"
         is_not_stage: "{{ not (is_stage|bool) }}"
 
+    - name: groups | set
+      group_by: >-
+        {{ (is_db|bool) and ((is_prod|bool) and "pdb" or "sdb") or "x" }}
+
 - hosts: sumo
   user: ubuntu
   become: true
@@ -143,20 +147,20 @@
       register: tempdir
       when: is_not_db|bool
 
-     - name: templates | fetch
-       local_action: >-
-         fetch
-         src={{ osumo_repo.destination }}/devops/templates/{{ item }}
-         dest={{ tempdir.stdout }}/{{ item }}
+    - name: templates | fetch
+      local_action: >-
+        fetch
+        src={{ osumo_repo.destination }}/devops/templates/{{ item }}
+        dest={{ tempdir.stdout }}/{{ item }}
       with_items:
-       - girder.local.cfg.j2
-       - worker.local.cfg.j2
+        - girder.local.cfg.j2
+        - worker.local.cfg.j2
       when: is_not_db|bool
 
-     - name: girder worker | configure
-       template:
-         src: "{{ tempdir.stdout }}/{{ item.src }}"
-         dest: "{{ osumo_repo.destination }}/{{ item.dest }}"
+    - name: resonant | configure
+      template:
+        src: "{{ tempdir.stdout }}/{{ item.src }}"
+        dest: "{{ osumo_repo.destination }}/{{ item.dest }}"
       with_items:
         - src: girder.local.cfg.j2
           dest: girder/girder/conf/girder.local.cfg

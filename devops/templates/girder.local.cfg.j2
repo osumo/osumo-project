@@ -1,0 +1,23 @@
+
+{%- set group_key=("pdb" if is_prod else "sdb") -%}
+{%- set mode=("production" if is_prod else "development") -%}
+{%- set mongo_ip=(hostsvars[groups[group_key][0]]
+                           ["ansible_eth0"]
+                           ["ipv4"]
+                           ["address"]) -%}
+
+[global]
+server.socket_host: "0.0.0.0"
+server.socket_port: 80
+server.thread_pool: 100
+
+[database]
+uri: "mongodb://{{ mongo_ip }}:27017/girder"
+
+[server]
+mode: "{{ mode }}"
+
+[logging]
+error_log_file="/dev/stderr"
+info_log_file="/dev/stdout"
+
