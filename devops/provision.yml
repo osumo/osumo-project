@@ -83,8 +83,9 @@
         is_not_stage: "{{ not (is_stage|bool) }}"
 
     - name: groups | set
-      group_by: >-
-        {{ (is_db|bool) and ((is_prod|bool) and "pdb" or "sdb") or "x" }}
+      group_by:
+        key: >-
+          {{ (is_db|bool) and ((is_prod|bool) and "pdb" or "sdb") or "x" }}
 
 - hosts: sumo
   user: ubuntu
@@ -142,16 +143,21 @@
         state: link
       when: is_not_db|bool
 
+    # Notice the "become: false" clause.  When creating tmp dirs locally, it
+    # must be done as the current user because Ansible's fetch module will only
+    # write locally as the current user.
     - name: tmp dir | create
       local_action: command mktemp -d --tmpdir=/tmp osumo.XXXXXXXXXX
+      become: false
       register: tempdir
       when: is_not_db|bool
 
     - name: templates | fetch
-      local_action: >-
-        fetch
-        src={{ osumo_repo.destination }}/devops/templates/{{ item }}
-        dest={{ tempdir.stdout }}/{{ item }}
+      fetch:
+        src: "{{ osumo_repo.destination }}/devops/templates/{{ item }}"
+        dest: "{{ tempdir.stdout }}/{{ item }}"
+        flat: yes
+        fail_on_missing: yes
       with_items:
         - girder.local.cfg.j2
         - worker.local.cfg.j2

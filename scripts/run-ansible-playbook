@@ -17,6 +17,7 @@ cd gobig
 export ANSIBLE_LIBRARY="$( pwd )/library"
 ansible-playbook -i /dev/null                         \
                  --private-key=~/.ssh/sumo            \
+                 "$@"                                 \
                  "$TMP_DIR/$( basename "$playbook" )"
 
 exit $?
