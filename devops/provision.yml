@@ -39,21 +39,21 @@
 
       "stage-web":
         ssh_key: main
-        type: t2.micro
+        type: t2.medium
         image: ami-fce3c696
         volumes: [2, 10]
         security_groups: ["open"]
         ansible_groups: ["sumo", "staging", "web"]
       "stage-db":
         ssh_key: main
-        type: t2.micro
+        type: t2.medium
         image: ami-fce3c696
         volumes: [2, 10]
         security_groups: ["open"]
         ansible_groups: ["sumo", "staging", "db"]
       "stage-worker":
         ssh_key: main
-        type: t2.micro
+        type: t2.medium
         image: ami-fce3c696
         volumes: [2, 10]
         security_groups: ["open"]
