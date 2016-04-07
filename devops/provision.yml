@@ -115,6 +115,10 @@
       with_items:
         - git
         - python-apt
+        - apt-transport-https
+        - wget
+        - python-virtualenv
+        - python-dev
 
     - name: apt packages | install
       apt:
@@ -185,12 +189,28 @@
       local_action: shell rm -rf /tmp/osumo.*
       become: false
 
-  roles:
-    - role: nodejs
-      nodejs_version: v5.4.0
-      state: present
+    - name:  nodesource | apt | key | fetch
+      apt_key:
+        url: "https://deb.nodesource.com/gpgkey/nodesource.gpg.key"
+        state: present
       when: is_web|bool
 
+    - name: nodesource | apt | repository | add
+      apt_repository:
+        repo: "{{ item }} https://deb.nodesource.com/node_0.12 trusty main"
+        state: present
+      with_items:
+        - deb
+        - deb-src
+      when: is_web|bool
+
+    - name: nodejs | install
+      apt:
+        name: nodejs
+        update_cache: yes
+      when: is_web|bool
+
+  roles:
     - role: rabbitmq
       state: started
       when: is_worker|bool
@@ -201,6 +221,8 @@
 
     - role: upstart
       name: girder
+      user: root
+      group: root
       description: Girder Data Management Platform -- Web Service
       command: >-
           bash -e "{{ osumo_repo.destination }}/girder.bash"
@@ -208,6 +230,8 @@
 
     - role: upstart
       name: girder_worker
+      user: root
+      group: root
       description: Girder Worker Execution Engine Service
       command: >-
           bash -e "{{ osumo_repo.destination }}/worker.bash"

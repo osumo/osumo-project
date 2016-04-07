@@ -5,7 +5,7 @@ cd "$( dirname "$0" )"
 source scripts/env
 
 pushd girder
-/opt/nodejs/v5.4.0/bin/npm install
+npm install
 python -m girder &
 
 if [ '!' -d initialized ] ; then
