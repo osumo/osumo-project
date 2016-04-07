@@ -130,6 +130,11 @@
         - libffi-dev
         - libxml2-dev
         - libxslt1-dev
+        - libz-dev
+        - lib32z-dev
+        - zlib1g-dev
+        - openssl
+        - libssl-dev
         - build-essential
       when: is_not_db|bool
 
