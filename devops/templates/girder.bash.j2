@@ -9,6 +9,7 @@ rm -rf cache/env
 source scripts/env
 
 pushd girder
+npm upgrade -g npm
 npm install -g grunt-cli
 npm install
 npm run postinstall
