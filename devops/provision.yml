@@ -119,6 +119,7 @@
         - wget
         - python-virtualenv
         - python-dev
+        - libjpeg-dev
 
     - name: apt packages | install
       apt:
@@ -128,6 +129,8 @@
       with_items:
         - libffi-dev
         - libxml2-dev
+        - libxslt2-dev
+        - build-essential
       when: is_not_db|bool
 
     - name: osumo-project | clone
