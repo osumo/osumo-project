@@ -10,6 +10,3 @@
 [submodule "gobig"]
 	path = gobig
 	url = git://github.com/kitware/gobig
-[submodule "girder"]
-	path = girder
-	url = git://github.com/girder/girder.git
