@@ -129,7 +129,7 @@
       with_items:
         - libffi-dev
         - libxml2-dev
-        - libxslt2-dev
+        - libxslt1-dev
         - build-essential
       when: is_not_db|bool
 
