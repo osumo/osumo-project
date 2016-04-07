@@ -11,6 +11,7 @@ source scripts/env
 pushd girder
 npm install -g grunt-cli
 npm install
+npm run postinstall
 python -m girder &
 
 if [ '!' -d initialized ] ; then
