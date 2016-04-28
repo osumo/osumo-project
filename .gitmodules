@@ -1,15 +1,12 @@
 [submodule "osumo"]
 	path = osumo
 	url = git://github.com/osumo/osumo.git
-[submodule "girder"]
-	path = girder
-	url = git://github.com/opadron/girder.git
 [submodule "github-site"]
 	path = github-site
 	url = git://github.com/osumo/osumo.github.io
 [submodule "girder_worker"]
 	path = girder_worker
 	url = git://github.com/girder/girder_worker.git
-[submodule "gobig"]
-	path = gobig
-	url = git://github.com/kitware/gobig
+[submodule "girder-fixed"]
+	path = girder
+	url = git://github.com/girder/girder.git
