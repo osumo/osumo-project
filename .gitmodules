@@ -7,9 +7,6 @@
 [submodule "girder_worker"]
 	path = girder_worker
 	url = git://github.com/girder/girder_worker.git
-[submodule "gobig"]
-	path = gobig
-	url = git://github.com/kitware/gobig
 [submodule "girder-fixed"]
 	path = girder
 	url = git://github.com/girder/girder.git
