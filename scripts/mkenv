@@ -42,5 +42,10 @@ if [ '!' -d "$env_dir" ] ; then
     done
 fi 1>&2
 
+# switch out the girder_client package from pip; use the one from our pinned
+# version instead
+pip uninstall girder_client
+( cd "girder/clients/python" ; python setup.py install )
+
 echo "$env_dir"
 
