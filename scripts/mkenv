@@ -29,23 +29,26 @@ if [ '!' -d "$env_dir" ] ; then
     virtualenv "$env_dir"
     source "$env_dir/bin/activate"
 
-    pip install --upgrade pip
+    yes | pip install --upgrade pip
 
     args=("$@")
     for ((i=0; i<${#args[@]}; ++i)) ; do
         package="${args[$i]}"
         if [ -f "$package" ] ; then
-            pip install -r "$package"
+            yes | pip install -r "$package"
         else
-            pip install "$package"
+            yes | pip install "$package"
         fi
     done
-fi 1>&2
 
-# switch out the girder_client package from pip; use the one from our pinned
-# version instead
-pip uninstall girder_client
-( cd "girder/clients/python" ; python setup.py install )
+    # switch out the girder_client package from pip; use the one from our pinned
+    # version instead
+    yes | pip uninstall girder_client
+    pushd "girder/clients/python"
+    yes | python setup.py install
+    popd
+
+fi 1>&2
 
 echo "$env_dir"
 
