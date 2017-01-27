@@ -27,9 +27,19 @@ then
     L[${#L[@]}]="girder_worker/girder_worker/plugins/girder_io/requirements.txt"
     # L[${#L[@]}]="girder_worker/girder_worker/plugins/spark/requirements.txt"
 
-    requirements=("${L[@]}")
-    env="$( scripts/mkenv "" "${requirements[@]}" )"
-    source "$env/bin/activate"
+    env_dir="./cache/env"
+    mkdir -p "$( dirname "$env_dir" )"
+
+    if [ '!' -d "$env_dir" ] ; then
+        requirements=("${L[@]}")
+        env="$( scripts/mkenv "" "${requirements[@]}" )"
+        source "$env/bin/activate"
+
+        ( cd girder_worker ; pip install -e '.'          )
+        ( cd girder        ; pip install -e '.[plugins]' )
+    else
+        source "$env_dir/bin/activate"
+    fi
 
 else
     echo "script can only be sourced from project home directory." >&2
