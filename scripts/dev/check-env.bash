@@ -17,7 +17,7 @@ if ((x!=0)) ; then
 else
   for mod in shiny jsonlite pheatmap survival igraph cccd ; do
     Rscript --slave --no-save --no-restore-history -e "
-      if(!('{{ item }}' %in% installed.packages())) { stop() }" &> /dev/null
+      if(!('$mod' %in% installed.packages())) { stop() }" &> /dev/null
     x=$?
 
     if ((x!=0)) ; then

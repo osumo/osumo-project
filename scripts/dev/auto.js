@@ -64,6 +64,7 @@ const run = (key, command, callback) => {
 
   try { fs.mkdirSync('cache'); } catch(e) {}
   try { fs.mkdirSync(path.join('cache', 'logs')); } catch(e) {}
+  try { fs.mkdirSync(path.join('cache', 'db')); } catch(e) {}
 
   const stdoutFilename = path.join('cache', 'logs', [key, 'log'].join('.'));
   const stdoutStream = fs.createWriteStream(stdoutFilename);
@@ -92,7 +93,7 @@ let blessed;
 try {
   blessed = require('blessed');
 } catch(e) {
-  process.chdir('scripts');
+  process.chdir(path.join('scripts', 'dev'));
   spawnSync('npm', ['install', 'blessed', 'tree-kill']);
   process.chdir('..');
   let status = spawnSync(
@@ -130,8 +131,8 @@ const render = () => {
     if (brightness < 1) { brightness = 1; }
 
     let n = Math.floor(Math.min(10*(brightness - 1), 30));
-    if (key.length > 10) { key = key.slice(0, 10); }
-    while (key.length < 10) { key = key.concat(' '); }
+    if (key.length >= 20) { key = key.slice(0, 19); }
+    while (key.length < 20) { key = key.concat(' '); }
     for (;n--;) { key = key.concat('*'); }
     return key;
   }).join('\n');
@@ -185,7 +186,7 @@ render();
 
 run('mongod', ['mongod', '--dbpath', path.join('cache', 'db')], () => {});
 setTimeout(() => {
-  run('install', ['bash', '-x', path.join('scripts', 'dev-install.bash')], () => {
+  run('install', ['bash', '-x', path.join('scripts', 'dev', 'install.bash')], () => {
     const runBash = (key, com) => run(
       key, ['bash', '-c', ['set -x', 'source scripts/env', `${ com } &`,
                            'echo $!', 'wait'].join('\n')], ()=>{}
