@@ -95,7 +95,7 @@ try {
 } catch(e) {
   process.chdir(path.join('scripts', 'dev'));
   spawnSync('npm', ['install', 'blessed', 'tree-kill']);
-  process.chdir('..');
+  process.chdir(path.join('..', '..'));
   let status = spawnSync(
     process.argv[0],
     process.argv.slice(1),
