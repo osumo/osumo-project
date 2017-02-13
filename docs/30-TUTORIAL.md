@@ -15,7 +15,7 @@ platform.  The import statements assume that the code is saved under
 `osumo/web_client/analysis-modules/`, which is the section in the source code
 that is dedicated to housing analysis modules.  In development mode, OSUMO
 exports all the global variables you need to run the samples interactively in
-the developer console.  Simply copy and paste the samlpes without the preamble
+the developer console.  Simply copy and paste the samples without the preamble
 to see their effects live.
 
 ### Adding and removing analysis pages
@@ -29,7 +29,7 @@ The result of the dispatch is a promise that resolves to some result that is
 specific to the action dispatched.  Here, we create an `addAnalysisPage` action
 that adds the given page, and returns a promise on dispatch that resolves to a
 copy of the internal page object that is created.  The promise chain is extended
-with another that waits for 10 seconds, giving the user a chance to see the ui
+with another that waits for 10 seconds, giving the user a chance to see the UI
 elements created for the page, and then proceeds to pass the created page along
 to the `removeAnalysisPage` action creator, who creates the action that removes
 the page when dispatched.
@@ -67,7 +67,7 @@ dispatchPromise.then(
 Here, we add multiple pages in one go.  Careful attention is paid to the
 construction of the resulting promise chain.  This care is to ensure that the
 actions are dispatched- and their effects applied- in the correct order.  We
-keep a reference to the promise chain at this point for attatching follow-up
+keep a reference to the promise chain at this point for attaching follow-up
 actions in later samples.
 
 ```javascript
@@ -118,7 +118,7 @@ const addPagePromise = (
 ### Adding elements to pages
 
 Here, we add elements to the first page.  The `type` of each element determines
-how the elements' ui features are presented as well as the primary unit of
+how the elements' UI features are presented as well as the primary unit of
 functionality that is made available to the user.  The current selection is
 modest, offering a text field, buttons, and file selection types, but will be
 expanded as development continues.
@@ -399,7 +399,7 @@ demonstrate the dynamic and flexible nature of the OSUMO platform.
 Note that there are a few new functions used that are not otherwise explicitly
 mentioned.  The `truncateAnalysisPages` global action creator removes all
 analysis pages after the first `N`.  The `updateAnalysisElementState` global
-action creator is used to programatically update the state of elements.
+action creator is used to programmatically update the state of elements.
 
 In addition, the `postprocess` argument for the `processAnalysisPage` utility
 function is used, which allows the caller to customize each part of the page
@@ -427,6 +427,7 @@ const sumModule1 = (data = {}) => {
   const pageSpec = {
     key: pageKey,
     mainAction: 'main',
+    name: 'Sum Module Version 1',
     ui: [
       {
         name: 'a',
@@ -462,18 +463,6 @@ const sumModule1 = (data = {}) => {
       /* pass data along to the next instance */
       .then(sumModule1)
     );
-
-    /*
-    return (
-      store.dispatch(actions.truncateAnalysisPages(index + 1))
-      .then(() => {
-        let result = { sum, index: index + 1 };
-        if (data.outputId) { result.outputId = data.outputId; }
-        return result;
-      })
-      .then(sumModule2)
-    );
-    */
   };
 
   const postprocess = (
@@ -551,18 +540,6 @@ const sumModule2 = (data = {}) => {
       .then(() => ({ sum, index: index + 1 }))
       .then(sumModule2)
     );
-
-    /*
-    return (
-      store.dispatch(actions.truncateAnalysisPages(index + 1))
-      .then(() => {
-        let result = { sum, index: index + 1 };
-        if (data.outputId) { result.outputId = data.outputId; }
-        return result;
-      })
-      .then(sumModule3)
-    );
-    */
   };
 
   /* need a different key for each instance */
@@ -611,7 +588,7 @@ under `./server/ui_specs`.
 ```yaml
 ---
 key: sum
-
+name: Sum Module Version 2
 mainAction: main
 
 ui:
@@ -714,18 +691,10 @@ const sumModule3 = (data = {}) => {
     ]).then(
       ([, data]) => data
     ).then(sumModule3);
-
-    /*
-    return Promise.all([
-      truncatePromise,
-      runPromise
-    ]).then(
-      ([, data]) => data
-    ).then(sumModule1);
-    */
   };
 
   const preprocess = (page) => {
+    page.name = 'Sum Module Version 3';
     page.key = pageKey;
 
     /*
@@ -811,276 +780,21 @@ outputs:
 
 ... finally, make sure you restart the server before running this module.
 
+### Conclusion
 
+In this tutorial, you were shown how the mechanics of managing analysis pages
+and elements work and how to take advantage of them to quickly create custom and
+responsive UIs allowing your users to directly interface with your computational
+workflows.  Some final notes to consider are the following:
 
+ - By convention, the sources for all analysis modules are kept under the
+   `osumo/web_client/analysis-modules/` directory.  When adding modules, you
+   should place their source code files in there.
 
-
-
-
-
-
-
-
-
-
-
-### Cycle between all three modules?
-
-```javascript
-const altSumModule1 = (data = {}) => {
-  let hasSum = ('sum' in data);
-  let index = data.index || 0;
-  let pageKey = `sum-${index}`;
-
-  const pageSpec = {
-    key: pageKey,
-    mainAction: 'main',
-    ui: [
-      {
-        name: 'a',
-        key: 'a',
-        description: 'Enter a number',
-        type: 'field'
-      },
-
-      {
-        name: 'b',
-        key: 'b',
-        description: 'Enter a number',
-        type: 'field'
-      },
-
-      {
-        name: 'add',
-        type: 'button'
-      }
-    ]
-  };
-
-  const onMainAction = (state, page, action) => {
-    const { a, b } = analysisUtils.aggregateForm(state, page);
-    const sum = Number.parseFloat(a) + Number.parseFloat(b);
-
-    return (
-      store.dispatch(actions.truncateAnalysisPages(index + 1))
-      .then(() => {
-        let result = { sum, index: index + 1 };
-        if (data.outputId) { result.outputId = data.outputId; }
-        return result;
-      })
-      .then(altSumModule2)
-    );
-  };
-
-  const postprocess = (
-    hasSum
-     ? (type, elem) => {
-         if (type === 'element' && elem.key === 'a') {
-           store.dispatch(actions.updateAnalysisElementState(elem, {
-             value: data.sum.toString()
-           }));
-         }
-       }
-     : null
-  );
-
-  let promiseHead = Promise.resolve();
-  if (!hasSum) {
-    promiseHead = promiseHead.then(
-      () => store.dispatch(actions.truncateAnalysisPages(0))
-    );
-  }
-
-  return (
-    promiseHead
-
-    .then(
-      () => store.dispatch(actions.registerAnalysisAction(
-        pageKey, 'main', onMainAction))
-    )
-
-    .then(
-      () => analysisUtils.processAnalysisPage(store.dispatch, {
-        page: pageSpec,
-        postprocess
-      })
-    )
-  );
-};
-
-const altSumModule2 = (data = {}) => {
-  let hasSum = ('sum' in data);
-  let index = data.index || 0;
-  let pageKey = `sum-${index}`;
-
-  const onMainAction = (state, page, action) => {
-    const { a, b } = analysisUtils.aggregateForm(state, page);
-    const sum = Number.parseFloat(a) + Number.parseFloat(b);
-
-    return (
-      store.dispatch(actions.truncateAnalysisPages(index + 1))
-      .then(() => {
-        let result = { sum, index: index + 1 };
-        if (data.outputId) { result.outputId = data.outputId; }
-        return result;
-      })
-      .then(altSumModule3)
-    );
-  };
-
-  /* need a different key for each instance */
-  const preprocess = (page) => { page.key = pageKey; };
-
-  const postprocess = (
-    hasSum
-     ? (type, elem) => {
-         if (type === 'element' && elem.key === 'a') {
-           store.dispatch(actions.updateAnalysisElementState(elem, {
-             value: data.sum.toString()
-           }));
-         }
-       }
-     : null
-  );
-
-  let promiseHead = Promise.resolve();
-  if (!hasSum) {
-    promiseHead = promiseHead.then(
-      () => store.dispatch(actions.truncateAnalysisPages(0))
-    );
-  }
-
-  return (
-    promiseHead
-
-    .then(
-      () => store.dispatch(actions.registerAnalysisAction(
-        pageKey, 'main', onMainAction))
-    )
-
-    .then(
-      () => analysisUtils.fetchAndProcessAnalysisPage(store.dispatch, {
-        key: 'sum', preprocess, postprocess
-      })
-    )
-  );
-};
-
-const altSumModule3 = (data = {}) => {
-  let hasSum = ('sum' in data);
-  let hasOutputId = ('outputId' in data);
-  let index = data.index || 0;
-  let pageKey = `sum-${index}`;
-  let outputId = data.outputId;
-
-  /* NOTE: onMainAction has access to index and outputId */
-  const onMainAction = (state, page, action) => {
-    const truncatePromise = store.dispatch(
-      actions.truncateAnalysisPages(index + 1));
-    const form = analysisUtils.aggregateForm(state, page);
-
-    if (!hasOutputId) {
-      outputId = form.outputId;
-    }
-
-    const task = 'sum';
-    const inputs = {
-      a: `FLOAT:${form.a}`,
-      b: `FLOAT:${form.b}`
-    };
-    /*
-     * we specify the output format as "json" so that
-     * girder-worker knows how to write the data out to disk
-     */
-    const outputs = {
-      sum: `FILE:${outputId}:sum-${index}("format":"json")`
-    };
-    const title = 'sum';
-    const maxPolls = 40;
-
-    const runPromise = (
-      analysisUtils.runTask(task, { inputs, outputs }, { title, maxPolls })
-
-      .then((files) => {
-        let sumId;
-
-        files.forEach(({ fileId: fid, name }) => {
-          if (name === `sum-${index}`) { sumId = fid; }
-        });
-
-        return (
-          rest({ path: `file/${sumId}/download` })
-            .then(({ response }) => ({
-              sum: Number.parseFloat(response),
-              index: index + 1,
-              outputId
-            }))
-        );
-      })
-    );
-
-    return Promise.all([
-      truncatePromise,
-      runPromise
-    ]).then(
-      ([, data]) => data
-    ).then(altSumModule1);
-  };
-
-  const preprocess = (page) => {
-    page.key = pageKey;
-
-    /*
-     * If this is the first step, insert the
-     * folder selection element before the button.
-     */
-    if (!hasOutputId) {
-      page.ui.push(page.ui[2]);
-      page.ui[2] = {
-        key: 'outputId',
-        type: 'folderSelection',
-        name: 'Output Location',
-        description: 'Location for intermediate results'
-      };
-    }
-  };
-
-  const postprocess = (
-    hasSum
-     ? (type, elem) => {
-         if (type === 'element' && elem.key === 'a') {
-           store.dispatch(actions.updateAnalysisElementState(elem, {
-             value: data.sum.toString()
-           }));
-         }
-       }
-     : null
-  );
-
-
-  let promiseHead = Promise.resolve();
-  if (!hasSum) {
-    promiseHead = promiseHead.then(
-      () => store.dispatch(actions.truncateAnalysisPages(0))
-    );
-  }
-
-  return (
-    promiseHead
-
-    .then(
-      () => store.dispatch(actions.registerAnalysisAction(
-        pageKey, 'main', onMainAction))
-    )
-
-    .then(
-      () => analysisUtils.fetchAndProcessAnalysisPage(store.dispatch, {
-        key: 'sum',
-        preprocess,
-        postprocess
-      })
-    )
-  );
-};
-```
+ - In addition, there is a particular file among the analysis modules,
+   `osumo/web_client/analysis-modules/base-listing.jsx` that contains a static
+   listing of all analysis modules that constitute the "first step" in an
+   analysis workflow.  When adding new workflows, you will need to add an entry
+   to this list.  The contents of the list correspond to the options provided in
+   the drop-down menu on the top of the analysis page interface.
 
