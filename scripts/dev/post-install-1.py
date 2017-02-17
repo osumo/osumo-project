@@ -56,7 +56,7 @@ def ensure_user(client, **kwds):
                                 firstName=kwds['firstName'],
                                 lastName=kwds['lastName']))
 
-client = GirderClient(host='localhost', port=8080)
+client = GirderClient(host='localhost', port=25080)
 
 if find_user('girder'):
     client.authenticate('girder', 'girder')
@@ -72,9 +72,9 @@ client.authenticate('girder', 'girder')
 client.put('system/setting',
            parameters=dict(list=json.dumps([
                dict(key='worker.broker',
-                    value='mongodb://localhost/sumoBroker'),
+                   value='mongodb://localhost:25123/sumoBroker'),
                dict(key='worker.backend',
-                    value='mongodb://localhost/sumoBroker'),
+                   value='mongodb://localhost:25123/sumoBroker'),
                dict(key='core.route_table',
                     value=dict(
                         core_girder='/girder',

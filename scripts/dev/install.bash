@@ -3,11 +3,11 @@
 (
   echo '[global]'
   echo 'server.socket_host: "0.0.0.0"'
-  echo 'server.socket_port: 8080'
+  echo 'server.socket_port: 25080'
   echo 'server.thread_pool: 100'
   echo ''
   echo '[database]'
-  echo 'uri: "mongodb://localhost:27017/girder"'
+  echo 'uri: "mongodb://localhost:25123/sumoGirderDev"'
   echo 'replica_set: None'
   echo ''
   echo '[server]'
@@ -17,7 +17,7 @@
 (
   echo '[celery]'
   echo 'app_main=girder_worker'
-  echo 'broker=mongodb://localhost/sumoBroker'
+  echo 'broker=mongodb://localhost:25123/sumoBroker'
   echo ''
   echo '[girder_worker]'
   echo 'plugins_enabled=r,girder_io'

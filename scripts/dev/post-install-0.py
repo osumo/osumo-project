@@ -77,7 +77,7 @@ def find_assetstore(name):
 
     return result
 
-client = GirderClient(host='localhost', port=8080)
+client = GirderClient(host='localhost', port=25080)
 
 if find_user('girder'):
     client.authenticate('girder', 'girder')
@@ -96,7 +96,7 @@ if find_assetstore('local') is None:
                 parameters=dict(name='local',
                                 type=str(AssetstoreType.GRIDFS),
                                 db='sumoLocalStore',
-                                mongohost='mongodb://localhost:27017',
+                                mongohost='mongodb://localhost:25123',
                                 replicaset=''))
 
 client.put(

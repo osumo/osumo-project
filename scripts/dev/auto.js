@@ -184,7 +184,7 @@ setInterval(render, 10);
 box.focus();
 render();
 
-run('mongod', ['mongod', '--dbpath', path.join('cache', 'db')], () => {});
+run('mongod', ['mongod', '--dbpath', path.join('cache', 'db'), '--port', '25123'], () => {});
 setTimeout(() => {
   run('install', ['bash', '-x', path.join('scripts', 'dev', 'install.bash')], () => {
     const runBash = (key, com) => run(
