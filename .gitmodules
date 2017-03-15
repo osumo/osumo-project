@@ -10,3 +10,6 @@
 [submodule "girder-fixed"]
 	path = girder
 	url = git://github.com/girder/girder.git
+[submodule "sumo_io"]
+	path = sumo_io
+	url = git://github.com/osumo/sumo_io
