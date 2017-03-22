@@ -9,6 +9,83 @@ const path = require('path');
 
 let runTable = [];
 
+let osumoChangeReaction;
+const onOsumoChange = (e, name) => {
+  if (osumoChangeReaction) {
+    clearTimeout(osumoChangeReaction);
+  }
+
+  osumoChangeReaction = setTimeout(() => {
+    run('sync-osumo', [
+        'bash', '-c', [
+          'set -x', 'source scripts/env', 'girder-install plugin -f ./osumo &',
+          'echo $!', 'wait'
+        ].join('\n')
+    ], restartWeb);
+  }, 1000);
+};
+
+let sumoIOChangeReaction;
+const onSumoIOChange = (e, name) => {
+  if (sumoIOChangeReaction) {
+    clearTimeout(sumoIOChangeReaction);
+  }
+
+  sumoIOChangeReaction = setTimeout(() => {
+    run('sync-sumo-io', [
+      'rsync', '-avz', '--exclude', '.git', '--exclude', 'node_modules',
+      './sumo_io/', './girder_worker/girder_worker/plugins/sumo_io'
+    ], restartWorker);
+  }, 1000);
+};
+
+let restartWebReaction;
+const restartWeb = () => {
+  if (restartWebReaction) {
+    clearTimeout(restartWebReaction);
+  }
+
+  restartWebReaction = setTimeout(() => {
+    nuke(
+      serverPid,
+      'SIGTERM',
+      () => setTimeout(
+        () => run(
+          'server', [
+            'bash', '-c', [
+              'set -x', 'source scripts/env',
+              'girder-server &', 'echo $!', 'wait'
+            ].join('\n')
+          ], ()=>{}
+        ).stdout.once('data', (data) => {
+          serverPid = Number.parseInt(data.toString());
+        }),
+
+        10000
+      )
+    );
+  }, 10000);
+};
+
+let restartWorkerReaction;
+const restartWorker = () => {
+  if (restartWorkerReaction) {
+    clearTimeout(restartWorkerReaction);
+  }
+
+  restartWorkerReaction = setTimeout(() => {
+    nuke(workerPid, 'SIGTERM', () => run(
+      'worker', [
+        'bash', '-c', [
+          'set -x', 'source scripts/env', 'girder-worker &', 'echo $!', 'wait'
+        ].join('\n')
+      ], ()=>{}
+    ).stdout.once('data', (data) => {
+      workerPid = Number.parseInt(data.toString());
+    }));
+  }, 5000);
+};
+
 const onCloseAndExit = function (callback) {
   let result = function () { return callback.apply(this, arguments); };
   let closed = false;
@@ -32,7 +109,12 @@ const onCloseAndExit = function (callback) {
 };
 
 const onRemoveCallback = (entry, callback) => () => {
-  runTable = runTable.filter((e) => e.key !== entry.key);
+  let found = false;
+  runTable = runTable.filter((e) => {
+    if (found) { return true; }
+    found = (e.key === entry.key);
+    return !found;
+  });
   if (quitTriggered) {
     if (runTable.length === 0) {
       process.exit(0);
@@ -94,7 +176,7 @@ try {
   blessed = require('blessed');
 } catch(e) {
   process.chdir(path.join('scripts', 'dev'));
-  spawnSync('npm', ['install', 'blessed', 'tree-kill']);
+  spawnSync('npm', ['install', 'blessed', 'tree-kill', 'node-watch']);
   process.chdir(path.join('..', '..'));
   let status = spawnSync(
     process.argv[0],
@@ -105,6 +187,7 @@ try {
 }
 
 let nuke = require('tree-kill');
+let watch = require('node-watch');
 
 let screen = blessed.screen({ smartCSR: true });
 screen.title = 'OSUMO Dev Environment Script';
@@ -151,6 +234,18 @@ const tryQuit = () => {
   quitTriggered = true;
 
   (
+    runTable
+      .filter(({ watcher }) => watcher)
+      .forEach(({ watcher }) => {
+        watcher.close();
+      })
+  );
+
+  runTable = runTable.filter(({ watcher }) => !watcher);
+
+
+  let n = 4;
+  (
     [
       serverPid,
       workerPid,
@@ -158,10 +253,17 @@ const tryQuit = () => {
       watchSumoPid
     ]
       .filter((pid) => pid)
-      .forEach((pid) => nuke(pid, 'SIGTERM'))
+      .forEach((pid) => nuke(pid, 'SIGTERM', (e) => {
+        if (e) {
+          console.log('ERROR!');
+          console.log(e);
+        }
+        --n;
+        if (n === 0) {
+          setTimeout(quitDb, 1000);
+        }
+      }))
   );
-
-  setTimeout(quitDb, 10000);
 };
 
 const quitDb = () => {
@@ -170,7 +272,11 @@ const quitDb = () => {
       runTable
         .filter(({ key }) => key === 'mongod')
         .forEach(
-          ({ process: proc }) => nuke(proc.pid)
+          ({ process: proc }) => {
+            if (proc && proc.pid) {
+              nuke(proc.pid)
+            }
+          }
         )
     );
   }
@@ -183,6 +289,9 @@ setInterval(render, 10);
 
 box.focus();
 render();
+
+let osumoSyncWatcher;
+let sumoIOSyncWatcher;
 
 run('mongod', ['mongod', '--dbpath', path.join('cache', 'db'), '--port', '25123'], () => {});
 setTimeout(() => {
@@ -202,6 +311,13 @@ setTimeout(() => {
             'girder-install web --watch-plugin osumo --plugin-prefix index'
       ).stdout.once('data',
                     (data) => watchSumoPid = Number.parseInt(data.toString()));
+
+    osumoSyncWatcher = watch('./osumo', { recursive: true }, onOsumoChange);
+    sumoIOSyncWatcher = watch('./sumo_io', { recursive: true }, onSumoIOChange);
+
+    runTable.push({ key: 'osumo-watch', watcher: osumoSyncWatcher });
+    runTable.push({ key: 'sumo-io-watch', watcher: sumoIOSyncWatcher });
+
   });
 }, 5000); // mongod
 

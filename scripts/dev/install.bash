@@ -25,14 +25,11 @@
 
 source scripts/env
 
-if [ '!' -d  girder_worker/girder_worker/plugins/sumo_io ] ; then
-  rsync -avz --exclude=.git ./sumo_io/ \
-    girder_worker/girder_worker/plugins/sumo_io
-fi
+mkdir -p ./girder_worker/girder_worker/plugins/sumo_io
+rsync -avz --exclude=.git ./sumo_io/ \
+    ./girder_worker/girder_worker/plugins/sumo_io
 
-if [ '!' -d girder/plugins/osumo ] ; then
-  girder-install plugin osumo
-fi
+girder-install plugin -f osumo
 girder-install web
 
 if [ '!' -d "cache/girder-post-install" ] ; then
