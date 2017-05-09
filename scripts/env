@@ -26,6 +26,8 @@ then
     L[${#L[@]}]="girder_worker/girder_worker/plugins/r/requirements.txt"
     L[${#L[@]}]="girder_worker/girder_worker/plugins/girder_io/requirements.txt"
     # L[${#L[@]}]="girder_worker/girder_worker/plugins/spark/requirements.txt"
+    #
+    L[${#L[@]}]="osumo/requirements.txt"
 
     env_dir="./cache/env"
     mkdir -p "$( dirname "$env_dir" )"
@@ -37,6 +39,8 @@ then
 
         ( cd girder_worker ; pip install -e '.'          )
         ( cd girder        ; pip install -e '.[plugins]' )
+
+        pip install numpy scipy
     else
         source "$env_dir/bin/activate"
     fi
