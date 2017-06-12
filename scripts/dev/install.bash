@@ -20,10 +20,15 @@
   echo 'broker=mongodb://localhost:25123/sumoBroker'
   echo ''
   echo '[girder_worker]'
-  echo 'plugins_enabled=r,girder_io'
+  echo 'plugins_enabled=r,girder_io,sumo_io'
 ) > girder_worker/girder_worker/worker.local.cfg
 
 source scripts/env
+
+if [ '!' -d  girder_worker/girder_worker/plugins/sumo_io ] ; then
+  rsync -avz --exclude=.git ./sumo_io/ \
+    girder_worker/girder_worker/plugins/sumo_io
+fi
 
 if [ '!' -d girder/plugins/osumo ] ; then
   girder-install plugin osumo
